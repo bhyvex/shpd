@@ -1,0 +1,19 @@
+{
+  "name": "shpd",
+  "version": "0.0.1",
+  "authors": [
+    "Evan Hazlett <ejhazlett@gmail.com>"
+  ],
+  "description": "DNS for Shipyard",
+  "license": "MIT",
+  "homepage": "http://shpd.io",
+  "dependencies": {
+    "angular-jwt": "~0.0.7",
+    "angular-resource": "~1.3.15",
+    "angular-sanitize": "~1.3.15",
+    "angular-semantic-ui": "~0.0.3",
+    "angular": "~1.3.15",
+    "semantic-ui": "~1.12.0",
+    "ui-router": "~0.2.14"
+  }
+}
