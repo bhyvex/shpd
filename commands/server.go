@@ -27,6 +27,11 @@ var CmdServer = cli.Command{
 			Usage: "Redis password",
 			Value: "",
 		},
+		cli.StringFlag{
+			Name:  "session-secret",
+			Usage: "Session secret",
+			Value: "shpd-session",
+		},
 	},
 }
 
@@ -34,11 +39,12 @@ func cmdServer(c *cli.Context) {
 	listenAddr := c.String("listen")
 	redisAddr := c.String("redis-addr")
 	redisPassword := c.String("redis-password")
+	sessionSecret := c.String("session-secret")
 
 	log.Infof("shpd version %s", version.Version)
 	log.Infof("listening on %s", listenAddr)
 
-	a, err := api.NewApi(listenAddr, redisAddr, redisPassword)
+	a, err := api.NewApi(listenAddr, redisAddr, redisPassword, sessionSecret)
 	if err != nil {
 		log.Fatal(err)
 	}

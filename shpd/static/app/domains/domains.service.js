@@ -15,7 +15,15 @@
                             return response.data;
                         });
                     return promise;
-                }
+                },
+                remove: function(domain) {
+                    var promise = $http
+                        .delete('/api/domains/'+domain.domain)
+                        .then(function(response) {
+                            return response.data;
+                        });
+                    return promise;
+                },
             } 
         } 
 })();

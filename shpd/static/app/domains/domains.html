@@ -1,5 +1,72 @@
-<div class="row">
+<div class="ui small remove modal transition" style="margin-top: -98px;">
+<i class="close icon"></i>
+<div class="header">
+    Remove Domain: {{ vm.selectedDomain.name }}
+</div>
+<div class="content">
+    <p>Are you sure you want to remove this domain?</p>
+</div>
+<div class="actions">
+    <div class="ui negative button">
+        No
+    </div>
+    <div ng-click="vm.removeDomain()" class="ui positive right labeled icon button">
+        Yes
+        <i class="checkmark icon"></i>
+    </div>
+</div>
+</div>
+
+<div class="row" ng-show="vm.domains.length===0">
+    <div class="column center aligned">
+        <h2 class="ui header">You do not have any domains created.</h2>
+        <div ui-sref="dashboard.addDomain" class="ui button large green"><i class="icon add"></i> Create Domain</div>
+    </div>
+</div>
+
+<div class="two column row" ng-show="vm.domains.length>0">
+    <div class="left floated column">
+        <div ng-click="vm.refresh()" class="ui small blue labeled icon button">
+            <i class="refresh icon"></i> Refresh 
+        </div>
+        <div ui-sref="dashboard.addDomain" class="ui small green labeled icon button">
+            <i class="plus icon"></i> Add Domain
+        </div>
+    </div>
+
+    <div class="right aligned right floated column">
+        <div class="ui small icon input">
+            <input ng-model="tableFilter" placeholder="Search domains..."/>
+            <i class="search icon"></i>
+        </div>
+    </div>
+</div>
+
+<div class="row" ng-show="vm.domains.length>0">
     <div class="column">
-        <div ng-repeat="d in vm.domains">{{d.Name}}</div>
+        <table class="ui sortable celled table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Domain</th>
+                    <th>Endpoint</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr ng-repeat="d in vm.domains | filter:tableFilter">
+                    <td>{{d.name}}</td>
+                    <td>{{d.description}}</td>
+                    <td>{{d.domain}}</td>
+                    <td>{{d.endpoint}}</td>
+                    <td class="collapsing">
+                        <div ng-click="vm.showRemoveDomainDialog(d)" class="compact ui icon button red">
+                            <i class="trash icon"></i>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 </div>

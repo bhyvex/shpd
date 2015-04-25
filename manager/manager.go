@@ -16,11 +16,15 @@ import (
 const (
 	accountsKey   = "accounts"
 	authTokensKey = "authtokens"
+	domainsKey    = "domains"
+	allDomainsKey = "alldomains"
 	defaultExpire = 86400 * 14 // two weeks
 )
 
 var (
-	ErrInvalidToken = errors.New("invalid token")
+	ErrInvalidToken       = errors.New("invalid token")
+	ErrDomainExists       = errors.New("domain already exists")
+	ErrDomainDoesNotExist = errors.New("domain does not exist")
 )
 
 type Manager struct {
@@ -156,4 +160,86 @@ func (m *Manager) ValidateToken(username, token string) error {
 	}
 
 	return ErrInvalidToken
+}
+
+func (m *Manager) Domains(username string) ([]*Domain, error) {
+	conn := m.pool.Get()
+	defer conn.Close()
+
+	var domains []*Domain
+
+	key := fmt.Sprintf("%s:%s:*", domainsKey, username)
+	keys, err := redis.Strings(conn.Do("KEYS", key))
+	if err == redis.ErrNil {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	for _, k := range keys {
+		d, err := redis.String(conn.Do("GET", k))
+		if err != nil {
+			return nil, err
+		}
+
+		data := bytes.NewBufferString(d)
+
+		var domain *Domain
+		if err := json.Unmarshal(data.Bytes(), &domain); err != nil {
+			return nil, err
+		}
+
+		domains = append(domains, domain)
+
+	}
+
+	return domains, nil
+}
+
+func (m *Manager) AddDomain(username string, domain *Domain) error {
+	conn := m.pool.Get()
+	defer conn.Close()
+
+	data, err := json.Marshal(domain)
+	if err != nil {
+		return err
+	}
+
+	res, err := redis.Int64(conn.Do("SISMEMBER", allDomainsKey, domain.Domain))
+	if err != nil {
+		return err
+	}
+
+	if res != 0 {
+		return ErrDomainExists
+	}
+
+	key := fmt.Sprintf("%s:%s:%s", domainsKey, username, domain.Domain)
+	if _, err := conn.Do("SET", key, string(data)); err != nil {
+		return err
+	}
+
+	// add to all domains to check for existing
+	if _, err := conn.Do("SADD", allDomainsKey, domain.Domain); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Manager) RemoveDomain(username, domain string) error {
+	conn := m.pool.Get()
+	defer conn.Close()
+
+	key := fmt.Sprintf("%s:%s:%s", domainsKey, username, domain)
+	res, err := redis.Int64(conn.Do("DEL", key))
+	if err != nil {
+		return err
+	}
+
+	if res == 0 {
+		return ErrDomainDoesNotExist
+	}
+
+	return nil
 }

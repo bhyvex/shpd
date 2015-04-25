@@ -23,5 +23,12 @@
                 }] 
             }
         })
+        .state('dashboard.addDomain', {
+            url: '^/domains/add',
+            templateUrl: 'app/domains/add.html',
+            controller: 'AddDomainController',
+            controllerAs: 'vm',
+            authenticate: true
+        })
     }
 })();

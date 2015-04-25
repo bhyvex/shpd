@@ -1,0 +1,87 @@
+<div class="row">
+    <div class="column">
+        <div class="ui segment">
+            <div class="ui negative icon message" ng-show="vm.error">
+                <i class="warning sign icon"></i>
+                <div class="content">
+                    <div class="header">
+                        {{vm.error}}
+                    </div>
+                </div>
+            </div>
+            <div class="ui form" ng-submit="vm.addDomain()" ng-method="post">
+                <div class="field">
+                    <label>Name</label>
+                    <div class="ui corner labeled input">
+                        <input name="name" type="text" ng-model="vm.name">
+                        <div class="ui corner label">
+                            <i class="asterisk icon"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="field">
+                    <label>Description</label>
+                    <input name="description" type="text" ng-model="vm.description">
+                </div>
+                <div class="field">
+                    <label>Domain</label>
+                    <div class="ui corner labeled input">
+                        <input name="domain" type="text" ng-model="vm.domain">
+                        <div class="ui corner label">
+                            <i class="asterisk icon"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="field">
+                    <label>Endpoint</label>
+                    <div class="ui corner labeled input">
+                        <input name="endpoint" type="text" ng-model="vm.endpoint">
+                        <div class="ui corner label">
+                            <i class="asterisk icon"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ui divider"></div>
+                <div class="ui submit button green">Create</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(function(){
+    $('.ui.form')
+        .form({
+            name: {
+                identifier : 'name',
+                rules: [
+                    {
+                        type   : 'empty',
+                        prompt : 'Please enter a name'
+                    }
+                ]
+            },
+            domain: {
+                identifier : 'domain',
+                rules: [
+                    {
+                        type   : 'empty',
+                        prompt : 'Please enter a domain'
+                    }
+                ]
+            },
+            endpoint: {
+                identifier : 'endpoint',
+                rules: [
+                    {
+                        type   : 'empty',
+                        prompt : 'Please enter an endpoint'
+                    }
+                ]
+            }
+        });
+
+    $('.ui.checkbox').checkbox();
+});
+</script>
