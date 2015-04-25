@@ -190,7 +190,7 @@ func (a *Api) addDomain(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := a.manager.AddDomain(username, domain); err != nil {
-		log.Errorf("error adding domain: %s", err)
+		log.Errorf("error adding domain: domain=%s err=%s", domain.Domain, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
