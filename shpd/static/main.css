@@ -17,3 +17,8 @@
     display: none;
     visability:hidden;
 }
+.info {
+    font-size: 36px;
+    margin: 10px 0 25px 0;
+    color: #a1a1a1;
+}

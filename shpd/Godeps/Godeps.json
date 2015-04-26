@@ -8,9 +8,49 @@
 			"Rev": "f92b7950b372b1db80bd3527e4d40e42555fe6c2"
 		},
 		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/aws",
+			"Rev": "528fdccfb1784861a4a24809328f891336449926"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/endpoints",
+			"Rev": "528fdccfb1784861a4a24809328f891336449926"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/protocol/query",
+			"Rev": "528fdccfb1784861a4a24809328f891336449926"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/protocol/rest",
+			"Rev": "528fdccfb1784861a4a24809328f891336449926"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/protocol/restxml",
+			"Rev": "528fdccfb1784861a4a24809328f891336449926"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/protocol/xml/xmlutil",
+			"Rev": "528fdccfb1784861a4a24809328f891336449926"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/signer/v4",
+			"Rev": "528fdccfb1784861a4a24809328f891336449926"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/service/route53",
+			"Rev": "528fdccfb1784861a4a24809328f891336449926"
+		},
+		{
 			"ImportPath": "github.com/codegangsta/cli",
 			"Comment": "1.2.0-66-g6086d79",
 			"Rev": "6086d7927ec35315964d9fea46df6c04e6d697c1"
+		},
+		{
+			"ImportPath": "github.com/garyburd/redigo/internal",
+			"Rev": "535138d7bcd717d6531c701ef5933d98b1866257"
+		},
+		{
+			"ImportPath": "github.com/garyburd/redigo/redis",
+			"Rev": "535138d7bcd717d6531c701ef5933d98b1866257"
 		},
 		{
 			"ImportPath": "github.com/gorilla/context",
@@ -19,6 +59,14 @@
 		{
 			"ImportPath": "github.com/gorilla/mux",
 			"Rev": "e444e69cbd2e2e3e0749a2f3c717cec491552bbf"
+		},
+		{
+			"ImportPath": "github.com/nu7hatch/gouuid",
+			"Rev": "179d4d0c4d8d407a32af483c2354df1d2c91e6c3"
+		},
+		{
+			"ImportPath": "github.com/vaughan0/go-ini",
+			"Rev": "a98ad7ee00ec53921f08832bc06ecf7fd600e6a1"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/bcrypt",

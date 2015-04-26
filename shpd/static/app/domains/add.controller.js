@@ -10,11 +10,23 @@
             var vm = this;
             vm.name = "";
             vm.description = "";
-            vm.domain = "";
+            vm.prefix = "";
             vm.endpoint = "";
             vm.creating = false;
+            vm.detectedIP = "";
             vm.addDomain = addDomain;
+            vm.getIP = getIP;
 
+            // attempt to get remote IP to preload form
+            getIP();
+
+            function getIP() {
+                $http
+                    .get('/api/ip')
+                    .success(function(data, status, headers, config) {
+                        vm.detectedIP = data;
+                    });
+            }
             function isFormValid() {
                 return $('.ui.form').form('validate form');
             }
@@ -27,7 +39,7 @@
                 vm.request = {
                     name: vm.name,
                     description: vm.description,
-                    domain: vm.domain,
+                    prefix: vm.prefix,
                     endpoint: vm.endpoint
                 }
 

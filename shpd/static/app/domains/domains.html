@@ -19,7 +19,7 @@
 
 <div class="row" ng-show="vm.domains.length===0">
     <div class="column center aligned">
-        <h2 class="ui header">You do not have any domains created.</h2>
+        <div class="info">You do not have any domains created.</div>
         <div ui-sref="dashboard.addDomain" class="ui button large green"><i class="icon add"></i> Create Domain</div>
     </div>
 </div>
@@ -49,7 +49,7 @@
                 <tr>
                     <th>Name</th>
                     <th>Description</th>
-                    <th>Domain</th>
+                    <th>Domain Prefix</th>
                     <th>Endpoint</th>
                     <th></th>
                 </tr>
@@ -58,7 +58,7 @@
                 <tr ng-repeat="d in vm.domains | filter:tableFilter">
                     <td>{{d.name}}</td>
                     <td>{{d.description}}</td>
-                    <td>{{d.domain}}</td>
+                    <td>{{d.prefix}}</td>
                     <td>{{d.endpoint}}</td>
                     <td class="collapsing">
                         <div ng-click="vm.showRemoveDomainDialog(d)" class="compact ui icon button red">

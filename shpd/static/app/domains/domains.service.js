@@ -18,7 +18,7 @@
                 },
                 remove: function(domain) {
                     var promise = $http
-                        .delete('/api/domains/'+domain.domain)
+                        .delete('/api/domains/'+domain.prefix)
                         .then(function(response) {
                             return response.data;
                         });

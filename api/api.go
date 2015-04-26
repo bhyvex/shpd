@@ -31,8 +31,8 @@ type Credentials struct {
 	Password string `json:"password,omitempty"`
 }
 
-func NewApi(listen string, addr string, password string, sessionSecret string) (*Api, error) {
-	mgr, err := manager.NewManager(addr, password)
+func NewApi(listen string, addr string, password string, sessionSecret string, awsId string, awsKey string, zoneId string, defaultTTL int64, reservedPrefixes []string) (*Api, error) {
+	mgr, err := manager.NewManager(addr, password, awsId, awsKey, zoneId, defaultTTL, reservedPrefixes)
 	if err != nil {
 		return nil, err
 	}
@@ -189,18 +189,18 @@ func (a *Api) addDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := a.manager.AddDomain(username, domain); err != nil {
-		log.Errorf("error adding domain: domain=%s err=%s", domain.Domain, err)
+	if err := a.manager.AddSubdomain(username, domain); err != nil {
+		log.Errorf("error adding domain: prefix=%s err=%s", domain.Prefix, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	log.Infof("created domain: domain=%s username=%s", domain.Domain, username)
+	log.Infof("created domain: prefix=%s username=%s", domain.Prefix, username)
 }
 
 func (a *Api) removeDomain(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	domain := vars["domain"]
+	prefix := vars["prefix"]
 
 	username, _, err := a.getUsernameAndToken(r)
 	if err != nil {
@@ -214,13 +214,19 @@ func (a *Api) removeDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := a.manager.RemoveDomain(username, domain); err != nil {
+	if err := a.manager.RemoveSubdomain(username, prefix); err != nil {
+		log.Errorf("error removing subdomain: err=%s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	log.Infof("removed domain: domain=%s username=%s", domain, username)
+	log.Infof("removed domain: prefix=%s username=%s", prefix, username)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (a *Api) getIP(w http.ResponseWriter, r *http.Request) {
+	addr := strings.Split(r.RemoteAddr, ":")
+	w.Write([]byte(addr[0]))
 }
 
 func (a *Api) Run() error {
@@ -234,7 +240,8 @@ func (a *Api) Run() error {
 
 	apiRouter.Handle("/api/domains", a.authRequiredMiddleware(http.HandlerFunc(a.domains))).Methods("GET")
 	apiRouter.Handle("/api/domains", a.authRequiredMiddleware(http.HandlerFunc(a.addDomain))).Methods("POST")
-	apiRouter.Handle("/api/domains/{domain:.*}", a.authRequiredMiddleware(http.HandlerFunc(a.removeDomain))).Methods("DELETE")
+	apiRouter.Handle("/api/domains/{prefix:.*}", a.authRequiredMiddleware(http.HandlerFunc(a.removeDomain))).Methods("DELETE")
+	apiRouter.HandleFunc("/api/ip", a.getIP).Methods("GET")
 
 	//globalMux.Handle("/api/", apiRouter)
 	globalMux.Handle("/api/", apiRouter)

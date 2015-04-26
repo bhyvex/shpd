@@ -13,7 +13,7 @@
                 <div class="field">
                     <label>Name</label>
                     <div class="ui corner labeled input">
-                        <input name="name" type="text" ng-model="vm.name">
+                        <input name="name" type="text" ng-model="vm.name" placeholder="display name">
                         <div class="ui corner label">
                             <i class="asterisk icon"></i>
                         </div>
@@ -21,12 +21,12 @@
                 </div>
                 <div class="field">
                     <label>Description</label>
-                    <input name="description" type="text" ng-model="vm.description">
+                    <input name="description" type="text" ng-model="vm.description" placeholder="description of domain">
                 </div>
                 <div class="field">
-                    <label>Domain</label>
+                    <label>Prefix</label>
                     <div class="ui corner labeled input">
-                        <input name="domain" type="text" ng-model="vm.domain">
+                        <input name="prefix" type="text" ng-model="vm.prefix" placeholder="prefix of domain (i.e. your username); will become <prefix>.shpd.io">
                         <div class="ui corner label">
                             <i class="asterisk icon"></i>
                         </div>
@@ -35,7 +35,7 @@
                 <div class="field">
                     <label>Endpoint</label>
                     <div class="ui corner labeled input">
-                        <input name="endpoint" type="text" ng-model="vm.endpoint">
+                        <input name="endpoint" type="text" ng-model="vm.endpoint" placeholder="{{vm.detectedIP}}">
                         <div class="ui corner label">
                             <i class="asterisk icon"></i>
                         </div>
@@ -62,12 +62,12 @@ $(function(){
                     }
                 ]
             },
-            domain: {
-                identifier : 'domain',
+            prefix: {
+                identifier : 'prefix',
                 rules: [
                     {
                         type   : 'empty',
-                        prompt : 'Please enter a domain'
+                        prompt : 'Please enter a domain prefix'
                     }
                 ]
             },
