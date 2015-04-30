@@ -5,11 +5,10 @@
         .module('shpd.login')
 	.controller('LogoutController', LogoutController);
 
-        LogoutController.$inject = ['AuthService', '$state'];
-            function LogoutController(AuthService, $state) {
+        LogoutController.$inject = ['AuthService', '$state', '$window'];
+            function LogoutController(AuthService, $state, $window) {
                 var vm = this;
-                AuthService.logout();
-                $state.transitionTo('login');
+                $window.location.href = "/auth/logout";
             }
 })();
 

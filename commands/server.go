@@ -57,6 +57,18 @@ var CmdServer = cli.Command{
 			Usage: "Reserve the prefix from being created",
 			Value: &cli.StringSlice{},
 		},
+		cli.StringFlag{
+			Name:   "oauth-client-id",
+			Usage:  "oAuth Client ID",
+			Value:  "",
+			EnvVar: "OAUTH_CLIENT_ID",
+		},
+		cli.StringFlag{
+			Name:   "oauth-client-secret",
+			Usage:  "oAuth Client Secret",
+			Value:  "",
+			EnvVar: "OAUTH_CLIENT_SECRET",
+		},
 	},
 }
 
@@ -70,11 +82,27 @@ func cmdServer(c *cli.Context) {
 	awsR53ZoneId := c.String("aws-r53-hosted-zone-id")
 	awsDefaultTTL := int64(c.Int("aws-zone-default-ttl"))
 	reservedPrefixes := c.StringSlice("reserved-prefix")
+	oauthClientId := c.String("oauth-client-id")
+	oauthClientSecret := c.String("oauth-client-secret")
 
 	log.Infof("shpd version %s", version.Version)
 	log.Infof("listening on %s", listenAddr)
 
-	a, err := api.NewApi(listenAddr, redisAddr, redisPassword, sessionSecret, awsId, awsKey, awsR53ZoneId, awsDefaultTTL, reservedPrefixes)
+	cfg := &api.ApiConfig{
+		Listen:            listenAddr,
+		RedisAddr:         redisAddr,
+		RedisPassword:     redisPassword,
+		SessionSecret:     sessionSecret,
+		AwsID:             awsId,
+		AwsKey:            awsKey,
+		R53ZoneID:         awsR53ZoneId,
+		DefaultTTL:        awsDefaultTTL,
+		ReservedPrefixes:  reservedPrefixes,
+		OAuthClientID:     oauthClientId,
+		OAuthClientSecret: oauthClientSecret,
+	}
+
+	a, err := api.NewApi(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -204,6 +204,20 @@ func (m *Manager) ValidateToken(username, token string) error {
 	return ErrInvalidToken
 }
 
+func (m *Manager) DeleteToken(username, token string) error {
+	conn := m.pool.Get()
+	defer conn.Close()
+
+	log.Debugf("removing auth token: username=%s token=%s", username, token)
+
+	key := fmt.Sprintf("%s:%s", authTokensKey, username)
+	if _, err := conn.Do("DEL", key); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (m *Manager) Domains(username string) ([]*Domain, error) {
 	conn := m.pool.Get()
 	defer conn.Close()

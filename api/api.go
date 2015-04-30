@@ -3,18 +3,22 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
-	"github.com/shipyard/shpd/auth"
+	"github.com/gorilla/sessions"
 	"github.com/shipyard/shpd/manager"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/github"
 )
 
 const (
 	appSessionName = "shpd"
+	githubBaseURL  = "https://api.github.com"
 )
 
 var (
@@ -22,47 +26,116 @@ var (
 )
 
 type Api struct {
-	listenAddr string
-	manager    *manager.Manager
+	listenAddr        string
+	manager           *manager.Manager
+	store             sessions.Store
+	oauthClientID     string
+	oauthClientSecret string
+	oauthScopes       []string
+}
+
+type GithubUser struct {
+	Login string `json:"login,omitempty"`
+	Name  string `json:"name,omitempty"`
+	Email string `json:"email,omitempty"`
 }
 
 type Credentials struct {
 	Username string `json:"username,omitempty"`
-	Password string `json:"password,omitempty"`
+	Token    string `json:"token,omitempty"`
 }
 
-func NewApi(listen string, addr string, password string, sessionSecret string, awsId string, awsKey string, zoneId string, defaultTTL int64, reservedPrefixes []string) (*Api, error) {
-	mgr, err := manager.NewManager(addr, password, awsId, awsKey, zoneId, defaultTTL, reservedPrefixes)
+type ApiConfig struct {
+	Listen            string
+	RedisAddr         string
+	RedisPassword     string
+	SessionSecret     string
+	AwsID             string
+	AwsKey            string
+	R53ZoneID         string
+	DefaultTTL        int64
+	ReservedPrefixes  []string
+	OAuthClientID     string
+	OAuthClientSecret string
+}
+
+func getGithubURL(path string) string {
+	return fmt.Sprintf("%s%s", githubBaseURL, path)
+}
+
+func NewApi(config *ApiConfig) (*Api, error) {
+	mgr, err := manager.NewManager(config.RedisAddr, config.RedisPassword, config.AwsID, config.AwsKey, config.R53ZoneID, config.DefaultTTL, config.ReservedPrefixes)
 	if err != nil {
 		return nil, err
 	}
 
+	oauthScopes := []string{"user:email"}
+
+	store := sessions.NewCookieStore([]byte(config.SessionSecret))
+
 	return &Api{
-		listenAddr: listen,
-		manager:    mgr,
+		listenAddr:        config.Listen,
+		manager:           mgr,
+		store:             store,
+		oauthClientID:     config.OAuthClientID,
+		oauthClientSecret: config.OAuthClientSecret,
+		oauthScopes:       oauthScopes,
 	}, nil
 }
 
-func (a *Api) getUsernameAndToken(r *http.Request) (string, string, error) {
-	tokenHeader := r.Header.Get("X-Access-Token")
-	parts := strings.Split(tokenHeader, ":")
-
-	if len(parts) != 2 {
-		return "", "", ErrUnauthorized
+func (a *Api) getOAuthConfig() *oauth2.Config {
+	conf := &oauth2.Config{
+		ClientID:     a.oauthClientID,
+		ClientSecret: a.oauthClientSecret,
+		Scopes:       a.oauthScopes,
+		Endpoint:     github.Endpoint,
 	}
 
-	username := parts[0]
-	token := parts[1]
+	return conf
+}
+
+func (a *Api) getSession(r *http.Request) (*sessions.Session, error) {
+	return a.store.Get(r, "shpd")
+}
+
+func (a *Api) getUsernameAndToken(r *http.Request) (string, string, error) {
+	username := ""
+	token := ""
+
+	session, _ := a.getSession(r)
+	u := session.Values["username"]
+	t := session.Values["token"]
+
+	if u != nil {
+		username = u.(string)
+	}
+
+	if t != nil {
+		token = t.(string)
+	}
+
+	if username == "" || token == "" {
+		return "", "", ErrUnauthorized
+	}
 
 	return username, token, nil
 }
 
 func (a *Api) authRequiredMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		username, token, err := a.getUsernameAndToken(r)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
-			return
+		username := ""
+		token := ""
+
+		session, _ := a.getSession(r)
+		u := session.Values["username"]
+		t := session.Values["token"]
+
+		if u != nil {
+			username = u.(string)
+		}
+
+		if t != nil {
+			token = t.(string)
 		}
 
 		if err := a.manager.ValidateToken(username, token); err == nil {
@@ -70,71 +143,84 @@ func (a *Api) authRequiredMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		log.Warnf("unauthorized request: username=%s token=%s addr=%s", username, token, r.RemoteAddr)
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 	})
 }
 
 func (a *Api) login(w http.ResponseWriter, r *http.Request) {
-	var creds *Credentials
-	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
-		log.Warnf("error getting login credentials: %s", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	// redirect to oauth url
+	conf := a.getOAuthConfig()
+
+	url := conf.AuthCodeURL("state", oauth2.AccessTypeOffline)
+	http.Redirect(w, r, url, http.StatusFound)
+}
+
+func (a *Api) getOAuthClient(code string) (*http.Client, error) {
+	conf := a.getOAuthConfig()
+
+	token, err := conf.Exchange(oauth2.NoContext, code)
+	if err != nil {
+		return nil, err
+	}
+
+	return conf.Client(oauth2.NoContext, token), nil
+}
+
+func (a *Api) authCallback(w http.ResponseWriter, r *http.Request) {
+	code := r.FormValue("code")
+
+	client, err := a.getOAuthClient(code)
+
+	u := getGithubURL("/user")
+	resp, err := client.Get(u)
+	if err != nil {
+		log.Errorf("error getting user info: %s", err)
 		return
 	}
 
-	if !a.manager.Authenticate(creds.Username, creds.Password) {
-		log.Warnf("invalid login: username=%s addr=%s", creds.Username, r.RemoteAddr)
-		http.Error(w, "invalid username/password", http.StatusUnauthorized)
+	var userInfo *GithubUser
+
+	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
+		log.Errorf("error parsing github user info: %s", err)
 		return
 	}
 
-	token, err := a.manager.GenerateToken(creds.Username)
+	shpdToken, err := a.manager.GenerateToken(userInfo.Login)
 	if err != nil {
 		log.Errorf("error generating token: %s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if err := json.NewEncoder(w).Encode(token); err != nil {
-		log.Errorf("error serializing auth token: %s", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	// write to session
+	session, _ := a.getSession(r)
+	session.Values["username"] = shpdToken.Username
+	session.Values["token"] = shpdToken.Token
+	session.Values["code"] = code
+	sessions.Save(r, w)
 
-	log.Debugf("user login: username=%s addr=%s", creds.Username, r.RemoteAddr)
+	log.Debugf("authenticated user: username=%s", shpdToken.Username)
+
+	// redirect to domains
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
-func (a *Api) signup(w http.ResponseWriter, r *http.Request) {
-	var account *auth.Account
-	if err := json.NewDecoder(r.Body).Decode(&account); err != nil {
-		log.Errorf("error getting signup account: %s", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// check for existing user
-	acct, err := a.manager.Account(account.Username)
+func (a *Api) logout(w http.ResponseWriter, r *http.Request) {
+	username, token, err := a.getUsernameAndToken(r)
 	if err != nil {
-		log.Errorf("error getting account: %s", err)
+		log.Errorf("error getting user token: %s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// user already exists
-	if acct != nil {
-		http.Error(w, "user already exists", http.StatusBadRequest)
-		return
-	}
-
-	// create account
-	if err := a.manager.SaveAccount(account); err != nil {
-		log.Errorf("error saving account: %s", err)
+	if err := a.manager.DeleteToken(username, token); err != nil {
+		log.Errorf("error deleting user token: %s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	log.Infof("signup: username=%s email=%s", account.Username, account.Email)
+	// redirect to domains
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 func (a *Api) domains(w http.ResponseWriter, r *http.Request) {
@@ -145,7 +231,6 @@ func (a *Api) domains(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Debugf("getting domains: user=%v", username)
 	if username == "" {
 		http.Error(w, "unable to get user", http.StatusUnauthorized)
 		return
@@ -233,8 +318,9 @@ func (a *Api) Run() error {
 	globalMux := http.NewServeMux()
 
 	authRouter := mux.NewRouter()
-	authRouter.HandleFunc("/auth/login", a.login).Methods("POST")
-	authRouter.HandleFunc("/auth/signup", a.signup).Methods("POST")
+	authRouter.HandleFunc("/auth/login", a.login).Methods("GET")
+	authRouter.HandleFunc("/auth/logout", a.logout).Methods("GET")
+	authRouter.HandleFunc("/auth/callback", a.authCallback).Methods("GET")
 
 	apiRouter := mux.NewRouter()
 
