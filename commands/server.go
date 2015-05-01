@@ -57,6 +57,11 @@ var CmdServer = cli.Command{
 			Usage: "Reserve the prefix from being created",
 			Value: &cli.StringSlice{},
 		},
+		cli.IntFlag{
+			Name:  "max-user-domains, m",
+			Usage: "Maximum number of user domains",
+			Value: 10,
+		},
 		cli.StringFlag{
 			Name:   "oauth-client-id",
 			Usage:  "oAuth Client ID",
@@ -82,6 +87,7 @@ func cmdServer(c *cli.Context) {
 	awsR53ZoneId := c.String("aws-r53-hosted-zone-id")
 	awsDefaultTTL := int64(c.Int("aws-zone-default-ttl"))
 	reservedPrefixes := c.StringSlice("reserved-prefix")
+	maxUserDomains := c.Int("max-user-domains")
 	oauthClientId := c.String("oauth-client-id")
 	oauthClientSecret := c.String("oauth-client-secret")
 
@@ -98,6 +104,7 @@ func cmdServer(c *cli.Context) {
 		R53ZoneID:         awsR53ZoneId,
 		DefaultTTL:        awsDefaultTTL,
 		ReservedPrefixes:  reservedPrefixes,
+		MaxUserDomains:    maxUserDomains,
 		OAuthClientID:     oauthClientId,
 		OAuthClientSecret: oauthClientSecret,
 	}

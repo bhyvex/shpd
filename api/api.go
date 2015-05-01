@@ -55,6 +55,7 @@ type ApiConfig struct {
 	R53ZoneID         string
 	DefaultTTL        int64
 	ReservedPrefixes  []string
+	MaxUserDomains    int
 	OAuthClientID     string
 	OAuthClientSecret string
 }
@@ -64,7 +65,7 @@ func getGithubURL(path string) string {
 }
 
 func NewApi(config *ApiConfig) (*Api, error) {
-	mgr, err := manager.NewManager(config.RedisAddr, config.RedisPassword, config.AwsID, config.AwsKey, config.R53ZoneID, config.DefaultTTL, config.ReservedPrefixes)
+	mgr, err := manager.NewManager(config.RedisAddr, config.RedisPassword, config.AwsID, config.AwsKey, config.R53ZoneID, config.DefaultTTL, config.ReservedPrefixes, config.MaxUserDomains)
 	if err != nil {
 		return nil, err
 	}

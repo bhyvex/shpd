@@ -28,6 +28,7 @@ var (
 	ErrDomainExists       = errors.New("domain already exists")
 	ErrDomainDoesNotExist = errors.New("domain does not exist")
 	ErrDomainReserved     = errors.New("domain is reserved")
+	ErrMaxDomains         = errors.New("maximum number of domains reached")
 )
 
 type Manager struct {
@@ -37,9 +38,10 @@ type Manager struct {
 	defaultTTL       int64
 	zoneBase         string
 	reservedPrefixes []string
+	maxUserDomains   int
 }
 
-func NewManager(addr string, password string, awsId string, awsKey string, zoneId string, defaultTTL int64, reservedPrefixes []string) (*Manager, error) {
+func NewManager(addr string, password string, awsId string, awsKey string, zoneId string, defaultTTL int64, reservedPrefixes []string, maxUserDomains int) (*Manager, error) {
 	log.Debugf("connecting to redis: addr=%s", addr)
 	pool := &redis.Pool{
 		MaxIdle:     3,
@@ -63,6 +65,8 @@ func NewManager(addr string, password string, awsId string, awsKey string, zoneI
 		},
 	}
 
+	log.Debugf("maximum user domains: %d", maxUserDomains)
+
 	creds := aws.Creds(awsId, awsKey, "")
 	awsConfig := &aws.Config{
 		Credentials: creds,
@@ -78,6 +82,10 @@ func NewManager(addr string, password string, awsId string, awsKey string, zoneI
 		return nil, err
 	}
 
+	if resp == nil {
+		return nil, fmt.Errorf("no zone returned")
+	}
+
 	zoneBase := *resp.HostedZone.Name
 
 	log.Infof("connected to route53: zone=%s", zoneBase)
@@ -89,6 +97,7 @@ func NewManager(addr string, password string, awsId string, awsKey string, zoneI
 		defaultTTL:       defaultTTL,
 		zoneBase:         zoneBase,
 		reservedPrefixes: reservedPrefixes,
+		maxUserDomains:   maxUserDomains,
 	}, nil
 }
 
@@ -318,6 +327,15 @@ func (m *Manager) updateR53(changeType string, recordName string, recordType str
 }
 
 func (m *Manager) AddSubdomain(username string, domain *Domain) error {
+	// check if at max limit
+	userDomains, err := m.Domains(username)
+	if err != nil {
+		return err
+	}
+
+	if len(userDomains) >= m.maxUserDomains {
+		return ErrMaxDomains
+	}
 	// check if reserved
 	if m.prefixReserved(domain.Prefix) {
 		return ErrDomainReserved
@@ -380,6 +398,11 @@ func (m *Manager) RemoveSubdomain(username, prefix string) error {
 
 	conn := m.pool.Get()
 	defer conn.Close()
+
+	// remove from alldomains
+	if _, err := conn.Do("SREM", allDomainsKey, prefix); err != nil {
+		return err
+	}
 
 	key := fmt.Sprintf("%s:%s:%s", domainsKey, username, prefix)
 	res, err := redis.Int64(conn.Do("DEL", key))
