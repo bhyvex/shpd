@@ -32,6 +32,7 @@ type Api struct {
 	oauthClientID     string
 	oauthClientSecret string
 	oauthScopes       []string
+	allowedUsers      []string
 }
 
 type GithubUser struct {
@@ -58,6 +59,7 @@ type ApiConfig struct {
 	MaxUserDomains    int
 	OAuthClientID     string
 	OAuthClientSecret string
+	AllowedUsers      []string
 }
 
 func getGithubURL(path string) string {
@@ -81,6 +83,7 @@ func NewApi(config *ApiConfig) (*Api, error) {
 		oauthClientID:     config.OAuthClientID,
 		oauthClientSecret: config.OAuthClientSecret,
 		oauthScopes:       oauthScopes,
+		allowedUsers:      config.AllowedUsers,
 	}, nil
 }
 
@@ -97,6 +100,20 @@ func (a *Api) getOAuthConfig() *oauth2.Config {
 
 func (a *Api) getSession(r *http.Request) (*sessions.Session, error) {
 	return a.store.Get(r, "shpd")
+}
+
+func (a *Api) isValidUser(username string) bool {
+	if len(a.allowedUsers) == 0 {
+		return true
+	}
+
+	for _, u := range a.allowedUsers {
+		if u == username {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (a *Api) getUsernameAndToken(r *http.Request) (string, string, error) {
@@ -201,6 +218,14 @@ func (a *Api) authCallback(w http.ResponseWriter, r *http.Request) {
 	sessions.Save(r, w)
 
 	log.Debugf("authenticated user: username=%s", shpdToken.Username)
+
+	// check allowed user
+	if !a.isValidUser(shpdToken.Username) {
+		log.Warnf("unauthorized login: username=%s ip=%s", shpdToken.Username, r.RemoteAddr)
+		//http.Error(w, "forbidden", http.StatusForbidden)
+		http.Redirect(w, r, "/#/403", http.StatusFound)
+		return
+	}
 
 	// redirect to domains
 	http.Redirect(w, r, "/", http.StatusFound)

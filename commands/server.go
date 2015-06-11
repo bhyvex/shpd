@@ -74,6 +74,11 @@ var CmdServer = cli.Command{
 			Value:  "",
 			EnvVar: "OAUTH_CLIENT_SECRET",
 		},
+		cli.StringSliceFlag{
+			Name:  "allowed-user",
+			Usage: "Limit login to specified user",
+			Value: &cli.StringSlice{},
+		},
 	},
 }
 
@@ -90,9 +95,13 @@ func cmdServer(c *cli.Context) {
 	maxUserDomains := c.Int("max-user-domains")
 	oauthClientId := c.String("oauth-client-id")
 	oauthClientSecret := c.String("oauth-client-secret")
+	allowedUsers := c.StringSlice("allowed-user")
 
 	log.Infof("shpd version %s", version.Version)
 	log.Infof("listening on %s", listenAddr)
+	if len(allowedUsers) > 0 {
+		log.Infof("allowed users: %v", allowedUsers)
+	}
 
 	cfg := &api.ApiConfig{
 		Listen:            listenAddr,
@@ -107,6 +116,7 @@ func cmdServer(c *cli.Context) {
 		MaxUserDomains:    maxUserDomains,
 		OAuthClientID:     oauthClientId,
 		OAuthClientSecret: oauthClientSecret,
+		AllowedUsers:      allowedUsers,
 	}
 
 	a, err := api.NewApi(cfg)
